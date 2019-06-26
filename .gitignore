@@ -1,0 +1,8 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+stuff/
+StormData.csv.bz2
+sandbox.R
+.DS_Store

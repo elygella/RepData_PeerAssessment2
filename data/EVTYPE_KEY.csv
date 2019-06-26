@@ -1,0 +1,81 @@
+KEY,EVTYPE
+hurricane,Hurricane/Typhoon
+tornado,Tornado
+torndao,Tornado
+gustnado,Tornado
+flash flood,Flood
+flooding,Flood
+coastal flood,Flood
+coastal flooding,Flood
+flood,Flood
+stream fld,Flood
+fldg,Flood
+small stream,Flood
+lightning,Lightning
+ligntning,Lightning
+lighting,Lightning
+thunderstorm,Thunderstorm Wind
+tstm,Thunderstorm Wind
+hail,Hail
+blizzard,Blizzard
+avalanche,Avalanche
+avalance,Avalanche
+windchill,Extreme Cold/Wind Chill
+winds,Heavy Wind
+wnd,Heavy Wind
+gusty wind,High Wind
+wind,High Wind
+extreme cold,Cold/Wind Chill
+cold,Cold/Wind Chill
+low temperature,Cold/Wind Chill
+freezing rain,Ice Storm
+freez,Frost/Freeze
+frost,Frost/Freeze
+hot,Heat
+excessive heat,Heat
+heat,Heat
+warm,Heat
+high temperature,Heat
+^dry,Drought
+sleet,Sleet
+dust,Dust Devil
+surge,Storm Surge/Tide
+dense,Dense Fog
+smoke,Dense Smoke
+high surf,High Surf
+heavy surf,High Surf
+high sea,High Surf
+high swell,High Surf
+high wave,High Surf
+snow,Heavy Snow
+funnel,Funnel Cloud
+astronomical,Astronomical Low Tide
+winter weather,Winter Weather
+wild,Wildfire
+lake-effect,Lake-Effect Snow
+fog,Dense fog
+rip currents,Rip Current
+wintry,Winter Weather
+wintery,Winter Weather
+precipitation,Heavy Rain
+rain,Heavy Rain
+heavy shower,Heavy Rain
+waterspout,Waterspout
+volcanic,Volcanic Ash
+wayterspout,Waterspout
+water spout,Waterspout
+landspout,Waterspout
+tropical storm,Tropical Storm
+storm,Thunderstorm Wind
+summary,xxx
+ice ,Winter Weather
+beach erosin,Beach Erosion
+blow-out tide,Astronomical Low Tide
+blow-out tides,Astronomical Low Tide
+high tide,Astronomical Low Tide
+high water,Astronomical Low Tide
+brush fire,Wildfire
+brush fires,Wildfire
+coastal erosion,Coastal Flood
+glaze,Frost/Freeze
+grass fires,Wildfire

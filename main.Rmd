@@ -1,0 +1,378 @@
+---
+title: "Consequences of severe weather events on population health and economy in US"
+subtitle: "Analysis between ..."
+author: "David Affagard"
+date: "May, 2019"
+year: "2019"
+output: 
+        html_document:
+                toc: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+[Git repo : https://github.com/affagard/RepData_PeerAssessment2/](https://github.com/affagard/RepData_PeerAssessment2/)
+\  
+
+\  
+
+## Synopsis
+The basic goal of this assignment is to explore U.S. National Oceanic and Atmospheric Administration's (NOAA) Storm Database in order to answer the following questions about severe weather events :
+
+ * First, across the United States, which types of events are most harmful with respect to population health?
+ * And finally, which types of events have the greatest economic consequences?
+\  
+
+```{r, echo=FALSE}
+# Required libraries
+library(knitr)
+library(lubridate)
+library(R.cache)
+library(stringr)
+library(dplyr)
+library(ggplot2)
+```
+\  
+
+#### Data processing
+Loading and preprocessing the data
+
+- Dataset : Storm Data, an official publication from the National Weather Service of the National Oceanic & Atmospheric Administration.
+Detailled information  
+- Data source URL
+    * https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2 [47Mb]
+\  
+```{r nessage=FALSE}
+
+        if(!file.exists("data/StormData.csv.bz2")) {
+                
+                if(!dir.exists("data")) {
+                        dir.create("data", showWarnings = TRUE, recursive = FALSE, mode = "0744")
+                }
+                
+                download.file(
+                        "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2",
+                        destfile = "data/StormData.csv.bz2",
+                        method = "curl"
+                )
+                
+        }
+
+        # Cache loading
+
+        bypass_cache <- FALSE # Set to TRUE if you want to force redaing from CSV file
+        
+        if (bypass_cache | is.null(storm_data <- loadCache(list("read_storm_data")))) {
+                # print("Data not in cache, now loading from a large CSV file, please wait it might take a while...")
+                storm_data <- read.csv ("data/StormData.csv.bz2", header=TRUE, sep = ",", dec=".")
+                storm_data$EVTYPE <- trimws(toupper(storm_data$EVTYPE))
+                storm_data$STATE <- trimws(toupper(storm_data$STATE))
+                saveCache(storm_data, key=list("read_storm_data"))
+        } else {
+                # print("Data loaded from cache.")
+        }
+        
+```
+Informations about dataset (`storm_data`)
+ - `r dim(storm_data)[1]` records
+\  
+#### Cleaning data
+
+##### Clean data BGN_DATE : Date of the beginning of en event
+Convert `BGN_DATE` to date type, format `Y-m-d`
+```{r}
+storm_data$BGN_DATE <- trimws(as.character(storm_data$BGN_DATE))
+storm_data$BGN_DATE <- ymd(parse_date_time(storm_data$BGN_DATE, orders = c("mdY HMS")))
+```
+
+Other timing data as "end date" or time could be cleaned, but we asume to not do it because in the folowing we will only use `BGN_DATE` 
+
+
+##### Clean magnitude for damage amounts `PROPDMGEXP` and `CROPDMGEXP`
+According to documentation, magnitude unit should be `B`, `M` or `K`.
+There is `r nrow(subset(storm_data, !(PROPDMGEXP %in% list("B","b","M","m","K","k","H","h",""," "))))` dummy values for `PROPDMGEXP` (Property damages). We assume to set them to NA.
+```{r}
+storm_data$PROPDMGEXP <- ifelse(
+        !(storm_data$PROPDMGEXP %in% list("B","b","M","m","K","k","H","h")),
+        NA,
+        toupper(storm_data$PROPDMGEXP)
+)
+```
+Same treatment to `r nrow(subset(storm_data, !(CROPDMGEXP %in% list("B","b","M","m","K","k","H","h",""," "))))` dummy values for `CROPDMGEXP`
+```{r}
+storm_data$CROPDMGEXP <- ifelse(
+        !(storm_data$CROPDMGEXP %in% list("B","b","M","m","K","k","H","h")),
+        NA,
+        toupper(storm_data$CROPDMGEXP)
+)
+```
+\  
+\  
+##### Cleaning `EVTYPE`, the type of event
+```{r}
+# Trim and upper EVTYPE
+storm_data$EVTYPE <- trimws(toupper(storm_data$EVTYPE))
+
+# Replace `WINDS` occurrence by `WIND` in `storm_data$EVTYPE`
+storm_data$EVTYPE <- str_replace_all(storm_data$EVTYPE, "WINDS", "WIND")
+```
+Read the regular list of type of events from an additional file created for this report, based on the Storm Data Documentation. 
+```{r}
+
+regular_event_types <- read.csv("data/EVTYPE.csv")
+
+# Normalize to upper case
+regular_event_types$EVTYPE <- toupper(regular_event_types$EVTYPE)
+```
+
+```{r}
+
+# Set column EVTYPE.1 in storm_data with regular event types, set NA if EVTYPE is not originally regular
+storm_data$EVTYPE.1 <- ifelse(storm_data$EVTYPE %in% regular_event_types$EVTYPE,storm_data$EVTYPE, NA)
+
+# Subset a new dataframe from storm_data with no regular event types
+storm_data.1 <- subset(storm_data, is.na(EVTYPE.1))
+storm_data.1$EVTYPE <- as.factor(storm_data.1$EVTYPE)
+storm_data.1 <- group_by(storm_data.1,EVTYPE)
+
+
+# A list of keywords defined in a specific CSV file to clean typos and mismatched occurences 
+evtype_keys <- read.csv ("data/EVTYPE_KEY.csv", header=TRUE, sep = ",", dec=".")
+evtype_keys$KEY <- toupper(evtype_keys$KEY)
+evtype_keys$EVTYPE <- toupper(evtype_keys$EVTYPE)
+
+# Loop in the list of keywords
+for(key in evtype_keys$KEY) {
+        
+        # Subset records containing the keyword in EVTYPE
+        storm_data.2 <- subset(storm_data.1, str_detect(storm_data.1$EVTYPE, key, negate = FALSE))
+        
+        # Apply correction on EVTYPE in storm_data
+        storm_data$EVTYPE <- ifelse(
+                storm_data$REFNUM %in% storm_data.2$REFNUM, 
+                as.character(evtype_keys$EVTYPE[evtype_keys$KEY==key]),
+                storm_data$EVTYPE
+        )
+        
+        # Also apply correction on EVTYPE in storm_data.1
+        storm_data$EVTYPE.1 <- ifelse(
+                (storm_data$REFNUM %in% storm_data.2$REFNUM),
+                storm_data$EVTYPE,
+                storm_data$EVTYPE.1
+        )
+        # And refresh storm_data.1 with removing modified record
+        storm_data.1 <- subset(storm_data, is.na(EVTYPE.1))
+        storm_data.1$EVTYPE <- as.factor(storm_data.1$EVTYPE)
+        
+}
+
+
+# After corrections, refresh the column EVTYPE.1 of storm_data
+storm_data$EVTYPE.1 <- ifelse(storm_data$EVTYPE %in% regular_event_types$EVTYPE,storm_data$EVTYPE, NA)
+# Finally move EVTYPE.1 to EVTYPE
+storm_data$EVTYPE <- storm_data$EVTYPE.1
+
+```
+
+#### Filter data to kepp only the modern years (since 1994)
+The period of our study is from 1994 to 2011 (17 years)
+```{r}
+storm_data <- subset(storm_data, BGN_DATE >= "1950-01-01")
+storm_data <- ungroup(storm_data)
+```
+
+#### Most harmful events with respect the population health 
+We propose here to sort types of event by both fatalities and injuries. We consider that the most harmful is done by the sum of fatalities and injuries, but we will distinguish them in the final results.
+Fatalies and injuries are grouped in one term : `human_damages`
+To ease the reading, we will output only twenty first most harmful event types.
+```{r}
+
+# human_damages
+
+# Limit to the twenty first most harmful event types
+final_events.nb <- 20
+
+# Aggregate strom_data to human_damages by sum of fatalities and injuries
+human_damages <- aggregate(
+                x = list(storm_data$FATALITIES, storm_data$INJURIES), 
+                by = list(storm_data$EVTYPE),
+                FUN=sum,
+                na.rm=TRUE
+                )
+
+# Name columns
+colnames(human_damages) <- c('event_type', 'fatalities', 'injuries')
+
+# Add new column with total of damages
+human_damages$total <- human_damages$fatalities + human_damages$injuries
+
+human_damages$event_type <- as.factor(human_damages$event_type)
+
+# Limit to the twenty first most harmful event types
+human_damages <- top_n(x = human_damages, n = final_events.nb, wt = total)
+
+# Order by total descending
+human_damages <- human_damages[with(human_damages, order(-total)), ]
+
+# Add a rank column for most harmful
+human_damages$rank <- 1:length(human_damages$event_type)
+
+# Finally the dataframe of the 20 first most harmful event types
+final_events_human_damages <- select(human_damages, event_type, rank)
+
+# Create a dataframe of storm data limited to the 20 first most harmful event types regarding fatalities
+storm_data.fatalities <- select(storm_data, EVTYPE, FATALITIES)
+storm_data.fatalities$type <- "fatalities"
+storm_data.fatalities <- subset(storm_data.fatalities, EVTYPE %in% final_events_human_damages$event_type & FATALITIES > 0)
+colnames(storm_data.fatalities) <- c("event_type","nb_damages","type")
+
+
+# Create a dataframe of storm data limited to the 20 first most harmful event types regarding injuries
+storm_data.injuries <- select(storm_data, EVTYPE, INJURIES)
+storm_data.injuries$type <- "injuries"
+storm_data.injuries <- subset(storm_data.injuries, EVTYPE %in% final_events_human_damages$event_type & INJURIES > 0)
+colnames(storm_data.injuries) <- c("event_type","nb_damages","type")
+
+# Bind fatalities and injuries for the 20 first most harmful event types
+# Set the dataframe dor the first plot : most harmful event types with respect to population health
+storm_data.plot.1 <- rbind(storm_data.fatalities,storm_data.injuries)
+storm_data.plot.1 <- merge(x = storm_data.plot.1, y = final_events_human_damages, by = "event_type", all = TRUE)
+
+
+```
+
+```{r}
+
+g <- ggplot(
+        data = storm_data.plot.1,
+        aes(x = reorder(event_type, rank), y = nb_damages, fill = type, color = type)
+)
+g <- g + theme_bw() + theme(axis.text.x = element_text(angle = 30, hjust = 1))
+
+g <- g + theme(legend.position = "bottom") + labs( x = "Event types", y = "Human damages")
+
+g <- g + geom_bar(stat = "identity", position = "stack")
+
+print(g)
+
+```
+
+
+#### Greatest economic consequences
+
+
+```{r}
+# Different units (millions, billions, ...) are used so we need to normalize data amounts of material damages in dollars
+
+# Add a coefficient column for property damages in $
+storm_data$PROPDMGCOEF <- 1
+storm_data$PROPDMGCOEF <- if_else(!is.na(storm_data$PROPDMGEXP) & storm_data$PROPDMGEXP == "K", 1000, storm_data$PROPDMGCOEF)
+storm_data$PROPDMGCOEF <- if_else(!is.na(storm_data$PROPDMGEXP) & storm_data$PROPDMGEXP == "M", 1000000, storm_data$PROPDMGCOEF)
+storm_data$PROPDMGCOEF <- if_else(!is.na(storm_data$PROPDMGEXP) & storm_data$PROPDMGEXP == "B", 1000000000, storm_data$PROPDMGCOEF)
+
+# Add a coefficient column for crop damages in $
+storm_data$CROPDMGCOEF <- 1
+storm_data$CROPDMGCOEF <- if_else(!is.na(storm_data$CROPDMGEXP) & storm_data$CROPDMGEXP == "K", 1000, storm_data$CROPDMGCOEF)
+storm_data$CROPDMGCOEF <- if_else(!is.na(storm_data$CROPDMGEXP) & storm_data$CROPDMGEXP == "M", 1000000, storm_data$CROPDMGCOEF)
+storm_data$CROPDMGCOEF <- if_else(!is.na(storm_data$CROPDMGEXP) & storm_data$CROPDMGEXP == "B", 1000000000, storm_data$CROPDMGCOEF)
+
+# Add a column to calculate property and crop damages in $
+storm_data$prop_damages_in_doll <- coalesce(storm_data$PROPDMGCOEF*storm_data$PROPDMG, 0)
+storm_data$crop_damages_in_doll <- coalesce(storm_data$CROPDMGCOEF*storm_data$CROPDMG, 0)
+
+# Aggregate strom_data to matrial_damages by sum of property and crop damages in dollars
+material_damages <- aggregate(
+                x = list(storm_data$prop_damages_in_doll, storm_data$crop_damages_in_doll),
+                by = list(storm_data$EVTYPE), FUN=sum, na.rm=TRUE
+                )
+colnames(material_damages) <- c('event_type', 'prop_damages_in_doll', 'crop_damages_in_doll')
+
+# Create a column with total damages in dollars
+material_damages$total_in_doll <- coalesce(material_damages$prop_damages_in_doll,0) + coalesce(material_damages$crop_damages_in_doll,0)
+
+# Limit to the 20 first most expensive event types
+material_damages$event_type <- as.factor(material_damages$event_type)
+material_damages <- top_n(x = material_damages, n = final_events.nb, wt = total_in_doll)
+
+# Order by total descending
+material_damages <- material_damages[with(material_damages, order(-total_in_doll)), ]
+
+# Add a rank column for most expensive
+material_damages$rank <- 1:length(material_damages$event_type)
+
+# Finally the dataframe of the 20 first most expensive event types
+final_events_material_damages <- select(material_damages, event_type, rank)
+
+# Create a dataframe of storm data limited to the 20 first most expensive event types regarding property
+storm_data.prop <- select(storm_data, EVTYPE, prop_damages_in_doll)
+storm_data.prop$type <- "property"
+storm_data.prop <- subset(storm_data.prop, EVTYPE %in% final_events_material_damages$event_type & prop_damages_in_doll > 0)
+colnames(storm_data.prop) <- c("event_type","damages_in_doll","type")
+
+# Create a dataframe of storm data limited to the 20 first most expensive event types regarding crop
+storm_data.crop <- select(storm_data, EVTYPE, crop_damages_in_doll)
+storm_data.crop$type <- "crop"
+storm_data.crop <- subset(storm_data.crop, EVTYPE %in% final_events_material_damages$event_type & crop_damages_in_doll > 0)
+colnames(storm_data.crop) <- c("event_type","damages_in_doll","type")
+
+# Bind property and crop damages for the 20 first most expensive event types
+# Set the dataframe dor the second plot : event types that have greatest economic consequences
+storm_data.plot.2 <- rbind(storm_data.prop,storm_data.crop)
+storm_data.plot.2 <- merge(x = storm_data.plot.2, y = final_events_material_damages, by = "event_type", all = TRUE)
+
+
+
+```
+
+```{r}
+
+g <- ggplot(
+        data = storm_data.plot.2,
+        aes(x = reorder(event_type, rank), y = damages_in_doll/1000000000, fill = type, color = type)
+)
+g <- g + theme_bw() + theme(axis.text.x = element_text(angle = 40, hjust = 1))
+
+g <- g + theme(legend.position = "bottom") + labs( x = "Event types", y = "Material damages in Billions $")
+
+g <- g + geom_bar(stat = "identity", position = "stack")
+
+print(g)
+
+```
+
+##### Most harmfull 10 event types for human and for economy
+```{r}
+# Merge the two tops damaging events : human and material
+final_events <- merge(final_events_human_damages, final_events_material_damages, by = "event_type")
+final_events$rank <- final_events$rank.x + final_events$rank.y
+final_events <- arrange(final_events, rank)
+final_events <- subset(final_events, rank <= 20)
+
+storm_data.events <- select(storm_data, EVTYPE, BGN_DATE, FATALITIES, INJURIES)
+storm_data.events$casualties <- storm_data.events$FATALITIES + storm_data.events$INJURIES
+storm_data.events <- subset(storm_data.events, EVTYPE %in% final_events$event_type)
+storm_data.events$frequency <- 1 
+storm_data.plot.3 <- aggregate(
+        x = list(storm_data.events$casualties, storm_data.events$frequency), 
+        by = list(storm_data.events$BGN_DATE, storm_data.events$EVTYPE), 
+        FUN = "sum")
+colnames(storm_data.plot.3) <- list("date", "event_type", "casualties", "frequency")
+```
+
+```{r}
+g <- ggplot(
+        data = storm_data.plot.3,
+        aes(x = date, y = frequency, group = event_type, color = event_type)
+)
+g <- g + theme_bw() + theme(axis.text.x = element_text(angle = 40, hjust = 1))
+
+g <- g + theme(legend.position = "none") + labs( x = "Date", y = "Frequency")
+
+g <- g + geom_line(stat = "identity")
+
+g <- g + facet_wrap(~event_type)
+
+print(g)
+```
+
