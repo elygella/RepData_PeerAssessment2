@@ -1,12 +1,15 @@
 ---
 title: "Consequences of severe weather events on population health and economy in US"
-subtitle: "Analysis based on data from the National Oceanic and Atmospheric Administration's Storm Database"
 author: "David Affagard"
 date: "May, 2019"
-year: "2019"
-output: 
-        html_document:
-                toc: TRUE
+output:
+  html_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+subtitle: Analysis based on data from the National Oceanic and Atmospheric Administration's
+  Storm Database
+year: '2019'
 ---
 
 ```{r setup, include = FALSE}
@@ -32,6 +35,10 @@ The data analysis leads us :
  
 \  
 
+---------------
+
+
+## R Librairies required
 ```{r Libraries, message=FALSE}
 # Required libraries
 library(knitr)
@@ -43,6 +50,10 @@ library(data.table)
 library(ggplot2)
 ```
 \  
+
+
+---------------
+
 
 ## Data processing
 Loading and preprocessing the data
@@ -81,7 +92,7 @@ Loading and preprocessing the data
 \  
 
 ### Get state fullnames
-State names are defined in a specific CSV file `UNITED_STATES.csv`, dowloadable here
+State names are defined in a specific CSV file [`UNITED_STATES.csv`](https://github.com/affagard/RepData_PeerAssessment2/blob/master/data/UNITED_STATES.csv), dowloadable [here [638 bytes]](https://github.com/affagard/RepData_PeerAssessment2/blob/master/data/UNITED_STATES.csv)
 ```{r Read United States names}
 united_states <- read.csv ("data/UNITED_STATES.csv", header=TRUE, sep = ",")
 storm_data <- merge(storm_data, united_states, by = "STATE", all.x = TRUE)
@@ -110,6 +121,10 @@ storm_data <- select(storm_data, REFNUM, STATE, STATENAME, EVTYPE, BGN_DATE, FAT
 ```
 \  
 \  
+
+
+---------------
+
 
 ## Cleaning data
 
@@ -179,7 +194,7 @@ The CSV file `EVTYPE.csv` may be dowloaded [here](https://github.com/affagard/Re
  - All events occurring `Tide` with `Astronomical Low Tide`
 
 
-```{r Regular Event types, message=FALSE, warning=FALSE}
+```{r Regular Event types, message=FALSE, warning=FALSE, cache=TRUE}
 
 regular_event_types <- read.csv("data/EVTYPE.csv")
 
@@ -266,6 +281,10 @@ storm_data <- ungroup(storm_data)
 \  
 \  
 \  
+
+
+---------------
+
 
 ## Results 
 
@@ -363,11 +382,9 @@ print(g)
 \  
 \  
 \  
-\  
-\  
-\  
-\  
-\  
+
+
+---------------
 
 
 ### Greatest economic consequences
@@ -444,7 +461,7 @@ g <- g + theme_bw() + theme()
 g <- g + theme(legend.position = "bottom") + labs( x = "Event types", y = "Material damages in $ Billions cumulative from 1993 to 2011", fill = element_blank())
 g <- g + geom_bar(stat = "identity")
 g <- g + coord_flip(xlim = NULL, ylim = NULL, expand = TRUE, clip = "on")
-g <- g + scale_y_continuous(breaks=seq(0,max(storm_data.material.damages$damages_in_doll/1000000000)+200,5), position = "right", limits = c(0,NA), expand = c(0, 1))
+g <- g + scale_y_continuous(breaks=seq(0,max(storm_data.material.damages$damages_in_doll/1000000000)+200,10), position = "right", limits = c(0,NA), expand = c(0, 1))
 
 print(g)
 
@@ -453,6 +470,10 @@ print(g)
 \  
 \  
 \  
+
+
+---------------
+
 
 ## Conclusion
 
@@ -465,5 +486,19 @@ print(g)
         - Drought is low consequence on harmfulness with population, but is pretty up for economic consequences.
 
 - In order to make decisions, we recommend to go further with analyzing the evolution over the last years of the frequencies of severe meteorological events.
+\  
+\  
+\  
+\  
+\  
+\  
+\  
+\  
+
+
+
+---------------
+End of document
+
 
 
