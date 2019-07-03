@@ -2,8 +2,7 @@ EVTYPE,DESIGNATOR
 Astronomical Low Tide,Z
 Avalanche,Z
 Blizzard,Z
-Coastal Flood,Z
-Cold/Wind Chill,Z
+Cold / Wind Chill,Z
 Debris Flow,C
 Dense Fog,Z
 Dense Smoke,Z
@@ -12,7 +11,7 @@ Dust Devil,C
 Dust Storm,Z
 Flood,C
 Freezing Fog,Z
-Frost/Freeze,Z
+Frost / Freeze,Z
 Funnel Cloud,C
 Hail,C
 Heat,Z
@@ -20,7 +19,6 @@ Heavy Rain,C
 Heavy Snow,Z
 High Surf,Z
 High Wind,Z
-Hurricane/Typhoon,Z
 Ice Storm,Z
 Lake-Effect Snow,Z
 Lakeshore Flood,Z
@@ -28,10 +26,10 @@ Lightning,C
 Rip Current,Z
 Seiche,Z
 Sleet,Z
-Storm Surge/Tide,Z
+Storm Surge / Tide,Z
 Strong Wind,Z
 Thunderstorm Wind,C
-Tornado,C
+Torn. / Hurri. / Typh.,C
 Tropical Depression,Z
 Tropical Storm,Z
 Tsunami,Z

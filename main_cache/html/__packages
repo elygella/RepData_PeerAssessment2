@@ -1,0 +1,8 @@
+base
+knitr
+lubridate
+R.cache
+stringr
+dplyr
+data.table
+ggplot2
